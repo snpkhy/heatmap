@@ -1,0 +1,16 @@
+# Who owns which files (GitHub requests their review automatically).
+# Fill in once pipelines are assigned. Later rules take precedence.
+# Usernames must exist on GitHub, so the rules stay commented out until then.
+
+# Shared infrastructure — the whole team
+# *                                         @member1 @member2 @member3 @member4
+
+# Member 1: pipelines p?, p?
+# /configs/pipelines/p1.yaml                @member1
+# /internal/methods/filtering/gaussian*.go  @member1
+
+# Member 2: pipelines p?, p?
+
+# Member 3: pipelines p?, p?
+
+# Member 4: pipelines p?, p?

@@ -1,0 +1,21 @@
+# Data and results (large, generated)
+/data/
+/results/
+
+# Build
+/bin/
+*.test
+*.out
+coverage.*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
