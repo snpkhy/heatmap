@@ -23,9 +23,18 @@ Motion detection and activity heatmap construction on surveillance camera video 
 ## 4. Pipelines
 Each member implements 2 pipelines, each with ≥ 3 stages from ≥ 3 distinct categories.
 
+Pool of pipelines: see [pipelines.md](pipelines.md).
+
 | ID | Stages (category) | Owner |
 |---|---|---|
-| | | |
+| p1 | see pipelines.md | |
+| p2 | see pipelines.md | |
+| p3 | see pipelines.md | |
+| p4 | see pipelines.md | |
+| p5 | see pipelines.md | |
+| p6 | see pipelines.md | |
+| p7 | see pipelines.md | |
+| p8 | see pipelines.md | |
 
 Methods from labs 5–6 that must not be reused: …
 
