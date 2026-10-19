@@ -35,8 +35,9 @@ web/dist/          production build output
 web/embed.go       //go:embed all:dist — the built UI is embedded into the Go binary
 ```
 
-- Development: `make dev` runs the Go API on :8080 and the Vite dev server on :5173, proxying `/api` to Go.
+- Development: run the Go API on :8080 (`heatmap serve`, once implemented) and `make web-dev` for the Vite dev server on :5173, which proxies `/api` to Go.
 - Production: `make build` builds the frontend first, then Go; the result is a single `heatmap` binary.
+- `web/dist/.gitkeep` is committed so `go build` works even before the UI has been built.
 - The UI never processes images. It only starts runs and displays what the API returns.
 
 Planned API:

@@ -1,0 +1,5 @@
+node_modules/
+# Build output is generated; only the placeholder is tracked so go:embed compiles.
+dist/*
+!dist/.gitkeep
+*.tsbuildinfo
