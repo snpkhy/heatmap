@@ -32,7 +32,10 @@ Methods from labs 5–6 that must not be reused: …
 ## 5. Complexity level
 …
 
-## 6. Test cases and metric thresholds
+## 6. User interface
+Local web UI (`heatmap serve`): React + TypeScript + Vite + MUI, pnpm. Owner: …
+
+## 7. Test cases and metric thresholds
 | ID | Pipeline/method | Data | Expectation |
 |---|---|---|---|
 | | | | |
