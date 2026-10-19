@@ -9,12 +9,12 @@ jobs:
     name: Go — lint and tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v8
+        uses: golangci/golangci-lint-action@v9
         with:
           version: v2.15.0
       - name: Test
@@ -29,8 +29,8 @@ jobs:
       run:
         working-directory: analysis
     steps:
-      - uses: actions/checkout@v5
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
       - run: uv sync
       - name: ruff check
         run: uv run ruff check .
