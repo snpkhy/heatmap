@@ -1,0 +1,14 @@
+# Keep LF in the working tree on every OS: gofmt, ruff and biome expect LF,
+# and Windows clones with core.autocrlf=true would otherwise get CRLF.
+* text=auto eol=lf
+
+*.sh   text eol=lf
+
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.bmp  binary
+*.gif  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
