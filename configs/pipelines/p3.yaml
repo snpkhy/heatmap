@@ -1,0 +1,11 @@
+id: p3
+name: Illumination-robust edges
+owner: Yaroslav
+description: Median filter, change of Sobel gradients against a background, closing.
+stages:
+  - method: median
+    params: {k: 3}
+  - method: sobel_diff
+    params: {threshold: 60, alpha: 0.05}
+  - method: closing
+    params: {k: 5}

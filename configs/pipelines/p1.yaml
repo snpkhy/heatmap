@@ -1,0 +1,13 @@
+id: p1
+name: Baseline background subtraction
+owner: Illia
+description: Gaussian blur, running-average background with an Otsu threshold, then opening and closing.
+stages:
+  - method: gaussian
+    params: {k: 5, sigma: 1.0}
+  - method: running_avg_otsu
+    params: {alpha: 0.05, fg_alpha: 0.005, min_threshold: 15}
+  - method: opening
+    params: {k: 3}
+  - method: closing
+    params: {k: 5}

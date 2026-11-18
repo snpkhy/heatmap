@@ -1,0 +1,10 @@
+id: p8
+name: Small noise and bad weather
+owner: Volodya
+description: Prewitt gradients, block mean/variance change detector, connected components with an area filter.
+stages:
+  - method: prewitt
+  - method: block_change
+    params: {block: 8, persist: 2}
+  - method: components
+    params: {connectivity: 8, min_area: 64}

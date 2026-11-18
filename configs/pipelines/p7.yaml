@@ -1,0 +1,11 @@
+id: p7
+name: Shadows and lighting changes
+owner: Volodya
+description: Chromaticity + HSV value, equalized value, per-pixel Gaussian background with shadow suppression.
+stages:
+  - method: chroma_value
+    params: {min_sum: 30}
+  - method: equalize
+    params: {channel: 2, keep_raw: true}
+  - method: gaussian_bg
+    params: {k: 3.5, shadow_channel: 2, ratio_channel: 3, shadow_low: 0.4, shadow_k: 6}
