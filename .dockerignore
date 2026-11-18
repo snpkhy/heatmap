@@ -1,0 +1,31 @@
+# Keep the build context small and free of host-specific artefacts.
+
+# VCS and editors
+.git/
+.github/
+.idea/
+.vscode/
+.DS_Store
+
+# Data and results are mounted at run time (see README), never baked in
+data/
+results/
+
+# Build output — rebuilt inside the image
+bin/
+*.test
+*.out
+coverage.*
+
+# Web: node_modules installed on the host (e.g. Windows) would overwrite the
+# Linux ones installed in the web stage by `COPY web/ ./` and break the build.
+web/node_modules/
+web/dist/
+web/*.tsbuildinfo
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+analysis/.venv/
+.pytest_cache/
+.ruff_cache/
