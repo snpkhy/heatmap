@@ -1,0 +1,14 @@
+id: p5
+name: Top-down heatmap
+owner: Vladyslav
+description: FFT low-pass, frame differencing, perspective warp of the mask onto a floor plan.
+stages:
+  - method: fft_filter
+    params: {shape: gaussian, cutoff: 0.1}
+  - method: frame_diff
+    params: {threshold: 8}
+  - method: perspective_warp
+    params:
+      src: [[0.25, 0.3], [0.75, 0.3], [1.0, 1.0], [0.0, 1.0]]
+      width: 160
+      height: 200

@@ -1,0 +1,10 @@
+id: p2
+name: Night and dark scenes
+owner: Illia
+description: Luma from YCbCr, CLAHE to lift dark regions, frame differencing grown into regions.
+stages:
+  - method: rgb_to_ycbcr
+  - method: clahe
+    params: {grid_x: 4, grid_y: 4, clip_limit: 3.0}
+  - method: frame_diff_region_growing
+    params: {seed_threshold: 30, grow_threshold: 12, max_intensity_diff: 0, connectivity: 8}

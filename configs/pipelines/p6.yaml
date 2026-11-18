@@ -1,0 +1,11 @@
+id: p6
+name: Motion directions
+owner: Vladyslav
+description: Harris corners, block matching between frames, motion direction histogram.
+stages:
+  - method: harris
+    params: {k: 0.04, sigma: 1.0, quality: 0.01, min_response: 10000, min_distance: 4, max_corners: 500}
+  - method: block_matching
+    params: {block: 9, search: 6, max_cost: 20, min_motion: 1, mask_radius: 5}
+  - method: direction_histogram
+    params: {bins: 8, min_magnitude: 1}

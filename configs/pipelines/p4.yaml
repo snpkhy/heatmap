@@ -1,0 +1,11 @@
+id: p4
+name: Shadow-robust texture
+owner: Yaroslav
+description: Box filter, block-wise LBP texture change, block threshold.
+stages:
+  - method: box
+    params: {k: 3}
+  - method: block_lbp
+    params: {block: 8, margin: 0.05, alpha: 0.05}
+  - method: block_threshold
+    params: {block: 8, threshold: 100}
