@@ -6,14 +6,14 @@ import (
 	"heatmap/internal/imgx"
 )
 
-func TestFrameDiff(t *testing.T) {
+func TestAbsDiff(t *testing.T) {
 	a := imgx.NewGray(2, 2)
 	b := imgx.NewGray(2, 2)
 
 	a.Set(0, 0, 100)
 	b.Set(0, 0, 60)
 
-	diff, err := FrameDiff(a, b)
+	diff, err := AbsDiff(a, b)
 	if err != nil {
 		t.Fatal(err)
 	}

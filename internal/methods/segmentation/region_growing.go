@@ -49,8 +49,8 @@ func (c RegionGrowingConfig) validate() error {
 	return nil
 }
 
-// FrameDiff computes the absolute pixel-wise difference |curr - prev|.
-func FrameDiff(curr, prev *imgx.Gray) (*imgx.Gray, error) {
+// AbsDiff computes the absolute pixel-wise difference |curr - prev|.
+func AbsDiff(curr, prev *imgx.Gray) (*imgx.Gray, error) {
 	if curr == nil || prev == nil {
 		return nil, fmt.Errorf("segmentation: curr and prev cannot be nil")
 	}
@@ -178,7 +178,7 @@ func (m *FrameDiffRegionGrowing) Apply(frame *imgx.Gray) (*imgx.Gray, error) {
 		return imgx.NewGray(frame.W, frame.H), nil
 	}
 
-	diff, err := FrameDiff(frame, m.prev)
+	diff, err := AbsDiff(frame, m.prev)
 	if err != nil {
 		return nil, err
 	}
