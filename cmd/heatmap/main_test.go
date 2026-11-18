@@ -20,7 +20,7 @@ func TestRun(t *testing.T) {
 		{name: "version", args: []string{"version"}, wantCode: 0, wantOut: "heatmap dev"},
 		{name: "help", args: []string{"help"}, wantCode: 0, wantOut: "Commands:"},
 		{name: "unknown command", args: []string{"foo"}, wantCode: 2, wantErr: `unknown command "foo"`},
-		{name: "not implemented", args: []string{"serve"}, wantCode: 1, wantErr: "not implemented"},
+		{name: "serve bad address", args: []string{"serve", "-addr", "256.0.0.1:99999"}, wantCode: 1, wantErr: "error"},
 	}
 
 	for _, tt := range tests {
