@@ -1,7 +1,8 @@
 import { ThemeProvider } from "@mui/material/styles";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 import { App } from "./App";
+import { listItem, mockFetch, pipelines, sequences } from "./test/helpers";
 import { theme } from "./theme";
 
 function renderApp() {
@@ -12,10 +13,12 @@ function renderApp() {
   );
 }
 
-afterEach(() => {
-  cleanup();
-  localStorage.clear();
-  document.documentElement.className = "";
+beforeEach(() => {
+  mockFetch({
+    "GET /api/pipelines": pipelines,
+    "GET /api/sequences": sequences,
+    "GET /api/runs": [listItem("run-a")],
+  });
 });
 
 describe("App", () => {
@@ -43,5 +46,16 @@ describe("App", () => {
     });
     expect(document.documentElement.classList.contains("light")).toBe(true);
     expect(screen.queryByTestId("DarkModeIcon")).not.toBeNull();
+  });
+
+  it("routes between pages with the hash", async () => {
+    renderApp();
+    expect(await screen.findByRole("heading", { name: "New run" })).toBeDefined();
+    act(() => {
+      window.location.hash = "#/runs";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(await screen.findByRole("heading", { name: "Runs" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Runs", selected: true })).toBeDefined();
   });
 });
