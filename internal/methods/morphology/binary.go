@@ -39,6 +39,17 @@ func Closing(src *imgx.Gray, k int) (*imgx.Gray, error) {
 	return Erode(d, k)
 }
 
+// Opening is erosion followed by dilation with the same k×k square.
+// It removes small noise spots and thin protrusions narrower than k,
+// while keeping the outer outline of larger objects roughly in place.
+func Opening(src *imgx.Gray, k int) (*imgx.Gray, error) {
+	e, err := Erode(src, k)
+	if err != nil {
+		return nil, err
+	}
+	return Dilate(e, k)
+}
+
 // apply runs dilation (grow = true) or erosion (grow = false) on a binary mask.
 func apply(src *imgx.Gray, k int, grow bool) (*imgx.Gray, error) {
 	if k < 1 || k%2 == 0 {

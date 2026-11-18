@@ -127,3 +127,38 @@ func TestChromaValue(t *testing.T) {
 		t.Errorf("value plane = %v, want [100 50]", f.B)
 	}
 }
+
+func TestPixelToYCbCrKnownColors(t *testing.T) {
+	// Pure black: Y = 0, Cb = 128, Cr = 128
+	y, cb, cr := PixelToYCbCr(0, 0, 0)
+	if !near(y, 0, 1e-3) || !near(cb, 128, 1e-3) || !near(cr, 128, 1e-3) {
+		t.Errorf("black YCbCr = (%v, %v, %v), want (0, 128, 128)", y, cb, cr)
+	}
+
+	// Pure white: Y = 255, Cb = 128, Cr = 128
+	y, cb, cr = PixelToYCbCr(255, 255, 255)
+	if !near(y, 255, 1e-3) || !near(cb, 128, 1e-3) || !near(cr, 128, 1e-3) {
+		t.Errorf("white YCbCr = (%v, %v, %v), want (255, 128, 128)", y, cb, cr)
+	}
+
+	// Pure gray: Y = 128, Cb = 128, Cr = 128
+	y, cb, cr = PixelToYCbCr(128, 128, 128)
+	if !near(y, 128, 1e-3) || !near(cb, 128, 1e-3) || !near(cr, 128, 1e-3) {
+		t.Errorf("gray YCbCr = (%v, %v, %v), want (128, 128, 128)", y, cb, cr)
+	}
+}
+
+func TestYCbCrRoundTrip(t *testing.T) {
+	levels := []float32{0, 32, 64, 128, 192, 255}
+	for _, r := range levels {
+		for _, g := range levels {
+			for _, b := range levels {
+				y, cb, cr := PixelToYCbCr(r, g, b)
+				r2, g2, b2 := PixelToRGBFromYCbCr(y, cb, cr)
+				if !near(r, r2, 1.0) || !near(g, g2, 1.0) || !near(b, b2, 1.0) {
+					t.Errorf("round trip failed for (%v, %v, %v): got (%v, %v, %v)", r, g, b, r2, g2, b2)
+				}
+			}
+		}
+	}
+}
