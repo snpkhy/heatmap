@@ -9,6 +9,7 @@ import (
 
 // Otsu calculates the optimal global binarization threshold for a grayscale image
 // using Otsu's method (maximizing the inter-class variance between background and foreground).
+// When multiple thresholds achieve the same maximum variance (plateau), the midpoint is returned.
 // Intensities are clamped to [0, 255].
 func Otsu(src *imgx.Gray) float32 {
 	if src.W == 0 || src.H == 0 || len(src.Pix) == 0 {
@@ -33,10 +34,10 @@ func Otsu(src *imgx.Gray) float32 {
 	}
 
 	var (
-		sumB   float64
-		wB     int
-		maxVar float64
-		bestT  int
+		sumB      float64
+		wB        int
+		maxVar    float64
+		variances [256]float64
 	)
 
 	for t := 0; t < 256; t++ {
@@ -53,21 +54,32 @@ func Otsu(src *imgx.Gray) float32 {
 		mB := sumB / float64(wB)
 		mF := (sumTotal - sumB) / float64(wF)
 
-		// Between-class variance: wB * wF * (mB - mF)^2
 		diff := mB - mF
 		variance := float64(wB) * float64(wF) * diff * diff
+		variances[t] = variance
 
 		if variance > maxVar {
 			maxVar = variance
-			bestT = t
 		}
 	}
 
-	return float32(bestT)
+	if maxVar <= 0 {
+		return 0
+	}
+
+	var sumT, count int
+	for t := 0; t < 256; t++ {
+		if math.Abs(variances[t]-maxVar) <= 1e-4 {
+			sumT += t
+			count++
+		}
+	}
+
+	return float32(sumT) / float32(count)
 }
 
 // OtsuThreshold segments src into a binary mask (0 or 255) using Otsu's threshold.
-// Pixels >= threshold become 255 (foreground), others become 0 (background).
+// Pixels > threshold become 255 (foreground), others become 0 (background).
 func OtsuThreshold(src *imgx.Gray) (*imgx.Gray, float32, error) {
 	if src == nil {
 		return nil, 0, fmt.Errorf("segmentation: src image cannot be nil")
@@ -75,7 +87,7 @@ func OtsuThreshold(src *imgx.Gray) (*imgx.Gray, float32, error) {
 	t := Otsu(src)
 	dst := imgx.NewGray(src.W, src.H)
 	for i, v := range src.Pix {
-		if v >= t {
+		if v > t {
 			dst.Pix[i] = MaskForeground
 		} else {
 			dst.Pix[i] = MaskBackground

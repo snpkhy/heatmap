@@ -139,7 +139,7 @@ func (m *RunningAvgBG) Apply(frame *imgx.Gray) (*imgx.Gray, error) {
 	fgAlpha := m.cfg.FGAlpha
 
 	for i := 0; i < n; i++ {
-		if m.diff.Pix[i] >= thresh {
+		if m.diff.Pix[i] > thresh {
 			mask.Pix[i] = MaskForeground
 			m.bg.Pix[i] = (1.0-fgAlpha)*m.bg.Pix[i] + fgAlpha*frame.Pix[i]
 		} else {
