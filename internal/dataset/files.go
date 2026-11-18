@@ -43,9 +43,12 @@ func OpenCDnet(dir, id string) (*CDnet, error) {
 	}
 	if first, last, ok := readTemporalROI(filepath.Join(dir, "temporalROI.txt")); ok &&
 		isDir(filepath.Join(dir, "groundtruth")) {
-		s.info.HasGT = true
-		s.info.EvalStart = max(first-1, 0)
-		s.info.EvalEnd = min(last-1, len(files)-1)
+		// Keep only the part of the ROI that has frames; an ROI entirely past
+		// the end means there is no usable ground truth.
+		start, end := max(first-1, 0), min(last-1, len(files)-1)
+		if start <= end {
+			s.info.HasGT, s.info.EvalStart, s.info.EvalEnd = true, start, end
+		}
 	}
 	if err := fillSize(&s.info, s); err != nil {
 		return nil, err

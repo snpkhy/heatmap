@@ -54,11 +54,9 @@ type Sequence interface {
 
 // Open opens a sequence by ID. IDs starting with "synthetic/" name built-in
 // scenes; "cdnet/<category>/<sequence>" and "frames/<name>" are looked up in
-// dataRoot/cdnet and dataRoot/frames. Anything else is treated as a path to a
-// CDnet sequence directory (one with input/) or to a folder of images.
-//
-// IDs may not contain ".." components, so an ID received from the web UI
-// cannot reach files outside dataRoot.
+// dataRoot/cdnet and dataRoot/frames. Any other ID is rejected, and IDs may
+// not contain "..", so an ID received from the web UI cannot reach files
+// outside dataRoot. Use OpenInput to also accept filesystem paths.
 func Open(dataRoot, id string) (Sequence, error) {
 	if id == "" {
 		return nil, fmt.Errorf("%w: empty id", ErrNotFound)
@@ -86,7 +84,18 @@ func Open(dataRoot, id string) (Sequence, error) {
 		}
 		return OpenFolder(filepath.Join(dataRoot, SourceFrames, parts[1]), id)
 	}
-	return OpenPath(id)
+	return nil, fmt.Errorf("%w: %q (want synthetic/<name>, cdnet/<category>/<sequence> or frames/<name>)", ErrNotFound, id)
+}
+
+// OpenInput is Open for trusted input such as the command line: an ID with a
+// known prefix is opened with Open, anything else as a filesystem path (see
+// OpenPath).
+func OpenInput(dataRoot, ref string) (Sequence, error) {
+	switch strings.SplitN(filepath.ToSlash(ref), "/", 2)[0] {
+	case SourceSynthetic, SourceCDnet, SourceFrames:
+		return Open(dataRoot, ref)
+	}
+	return OpenPath(ref)
 }
 
 // OpenPath opens a directory as a CDnet sequence if it has an input/

@@ -271,5 +271,13 @@ func decodeStrict(data []byte, v any) error {
 		}
 		return err
 	}
+	// A second document ("---") would otherwise be silently ignored.
+	var extra any
+	if err := dec.Decode(&extra); !errors.Is(err, io.EOF) {
+		if err != nil {
+			return err
+		}
+		return errors.New("only one YAML document is allowed")
+	}
 	return nil
 }

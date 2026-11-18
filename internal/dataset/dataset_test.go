@@ -148,10 +148,16 @@ func TestCDnet(t *testing.T) {
 		t.Error("frame past the end must fail")
 	}
 
-	// The same directory opened by path.
-	byPath, err := Open(root, dir)
+	// The same directory opened by path: only OpenInput accepts paths.
+	byPath, err := OpenInput(root, dir)
 	if err != nil || byPath.Info().Source != SourceCDnet {
 		t.Errorf("open by path: %v %v", byPath, err)
+	}
+	if _, err := Open(root, dir); !errors.Is(err, ErrNotFound) {
+		t.Errorf("Open must reject filesystem paths, err = %v", err)
+	}
+	if s, err := OpenInput(root, "synthetic/street"); err != nil || s.Info().Source != SourceSynthetic {
+		t.Errorf("OpenInput with an id: %v", err)
 	}
 }
 
@@ -170,6 +176,18 @@ func TestCDnetWithoutTemporalROI(t *testing.T) {
 	}
 	if gt, err := s.GroundTruth(0); gt != nil || err != nil {
 		t.Error("GroundTruth must be nil")
+	}
+}
+
+func TestCDnetTemporalROIPastTheEnd(t *testing.T) {
+	dir := t.TempDir()
+	writeCDnet(t, dir, 3, 7, 9)
+	s, err := OpenCDnet(dir, "x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info := s.Info(); info.HasGT || info.EvalStart != -1 || info.EvalEnd != -1 {
+		t.Errorf("ROI beyond the frames must mean no ground truth: %+v", info)
 	}
 }
 

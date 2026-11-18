@@ -55,6 +55,7 @@ func TestParsePipelineErrors(t *testing.T) {
 		"empty method":   "id: x\nstages: [{method: ''}]",
 		"unknown key":    "id: x\nstages: [{method: a, parms: {k: 1}}]",
 		"top-level typo": "id: x\nstage: [{method: a}]",
+		"two documents":  "id: x\nstages: [{method: a}]\n---\nstage: []\n",
 		"bad yaml":       "id: [",
 	}
 	for name, body := range cases {
