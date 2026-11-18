@@ -44,8 +44,9 @@ testcases: build-go ## Check reference test cases
 bench: ## Run Go benchmarks
 	go test -run '^$$' -bench . -benchmem ./...
 
-analysis: ## Build plots and tables from results/
-	uv run --project analysis python analysis/compare.py
+analysis: ## Build plots and tables for the latest run in results/ (RUN=... to pick one)
+	uv run --project analysis python analysis/plots.py $(if $(RUN),--run $(RUN))
+	uv run --project analysis python analysis/compare.py $(if $(RUN),--run $(RUN))
 
 test: test-go test-py test-web ## Run all tests
 

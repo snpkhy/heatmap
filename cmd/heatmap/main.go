@@ -48,8 +48,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if cmd, ok := commands[args[0]]; ok {
 		return cmd(args[1:], stdout, stderr)
 	}
-	switch args[0] {
-	case "experiment", "testcases", "bench", "serve":
+	if args[0] == "serve" {
 		_, _ = fmt.Fprintf(stderr, "command %q is not implemented yet\n", args[0])
 		return 1
 	}

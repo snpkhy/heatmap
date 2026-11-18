@@ -1,0 +1,9 @@
+# Main experiment: every pipeline on every built-in synthetic scene, clean and
+# with two kinds of synthetic noise. Add CDnet sequences (e.g.
+# cdnet/baseline/highway, cdnet/shadow/peopleInShade, cdnet/badWeather/skating)
+# once they are downloaded with `make data`.
+name: main
+pipelines: [p1, p2, p3, p4, p5, p6, p7, p8]
+sequences: [synthetic/street, synthetic/shadow, synthetic/night]
+noise: [none, "gaussian:10", "salt_pepper:0.02"]
+seed: 42
