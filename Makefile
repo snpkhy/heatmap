@@ -2,11 +2,11 @@ BIN        := bin/heatmap
 VERSION    ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS    := -X main.version=$(VERSION)
 PIPELINE   ?= configs/pipelines/p1.yaml
-INPUT      ?= data/cdnet/baseline/highway
+INPUT      ?= synthetic/street
 EXPERIMENT ?= configs/experiments/main.yaml
 GOLANGCI_LINT_VERSION ?= v2.15.0
 
-.PHONY: help setup build build-go web-build web-dev data run experiment testcases bench analysis \
+.PHONY: help setup build build-go web-build web-dev data run serve experiment testcases bench analysis \
         test test-go test-py test-web lint lint-go lint-py lint-web fmt docker clean
 
 help: ## Show this help
@@ -32,8 +32,11 @@ web-dev: ## Run the Vite dev server on :5173 (proxies /api to :8080)
 data: ## Download CDnet sequences into data/cdnet
 	./scripts/download_cdnet.sh
 
-run: build-go ## Run one pipeline (PIPELINE=..., INPUT=...)
-	$(BIN) run --pipeline $(PIPELINE) --input $(INPUT) --out results
+run: build-go ## Run one pipeline (PIPELINE=..., INPUT=synthetic/street or cdnet/<cat>/<seq>)
+	$(BIN) run --pipeline $(PIPELINE) --input $(INPUT) --out results --save-frames
+
+serve: build ## Build everything and start the web UI on http://localhost:8080
+	$(BIN) serve
 
 experiment: build-go ## Run the full experiment (EXPERIMENT=...)
 	$(BIN) experiment --config $(EXPERIMENT)
