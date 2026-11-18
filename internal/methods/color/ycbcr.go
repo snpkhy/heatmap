@@ -15,8 +15,10 @@ import (
 // to perform contrast enhancement and motion segmentation solely on the Y channel,
 // without being misled by noisy color variations in dark scenes.
 type YCbCr struct {
-	W, H     int
-	Y, Cb, Cr []float32
+	W, H int
+	Y    []float32
+	Cb   []float32
+	Cr   []float32
 }
 
 // NewYCbCr returns a w×h YCbCr image initialized to neutral black (Y=0, Cb=128, Cr=128).
