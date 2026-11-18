@@ -1,0 +1,5 @@
+# A fast smoke run of every pipeline on one scene, for development.
+name: quick
+pipelines: [p1, p2, p3, p4, p5, p6, p7, p8]
+sequences: [synthetic/street]
+frames: 60

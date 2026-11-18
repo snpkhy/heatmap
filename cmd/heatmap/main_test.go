@@ -20,7 +20,7 @@ func TestRun(t *testing.T) {
 		{name: "version", args: []string{"version"}, wantCode: 0, wantOut: "heatmap dev"},
 		{name: "help", args: []string{"help"}, wantCode: 0, wantOut: "Commands:"},
 		{name: "unknown command", args: []string{"foo"}, wantCode: 2, wantErr: `unknown command "foo"`},
-		{name: "not implemented", args: []string{"experiment"}, wantCode: 1, wantErr: "not implemented"},
+		{name: "not implemented", args: []string{"serve"}, wantCode: 1, wantErr: "not implemented"},
 	}
 
 	for _, tt := range tests {
@@ -114,5 +114,48 @@ func TestRunCommandErrors(t *testing.T) {
 	}
 	if code, _, _ := runCLI(t, "run", "-h"); code != 0 {
 		t.Error("-h must give code 0")
+	}
+}
+
+func TestExperimentTestcasesBenchCommands(t *testing.T) {
+	dir := t.TempDir()
+	exp := filepath.Join(dir, "e.yaml")
+	if err := os.WriteFile(exp, []byte("name: e\npipelines: [p1, p8]\nsequences: [synthetic/night]\nframes: 15\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, stderr := runCLI(t, "experiment", "-config", exp, "-pipelines", testPipelines, "-out", dir, "-workers", "2")
+	if code != 0 || !strings.Contains(stdout, "2 runs in") || !strings.Contains(stderr, "[2/2]") {
+		t.Errorf("experiment: code %d\n%s\n%s", code, stdout, stderr)
+	}
+
+	tc := filepath.Join(dir, "tc.yaml")
+	if err := os.WriteFile(tc, []byte(`cases:
+  - {id: A, pipeline: p1, sequence: synthetic/street, frames: 30, expect: {min_f1: 0.5}}
+  - {id: B, pipeline: p1, sequence: synthetic/street, frames: 30, expect: {min_f1: 0.999}}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	code, stdout, _ = runCLI(t, "testcases", "-config", tc, "-pipelines", testPipelines)
+	if code != 1 || !strings.Contains(stdout, "1/2 test cases passed") || !strings.Contains(stdout, "FAIL") {
+		t.Errorf("testcases: code %d\n%s", code, stdout)
+	}
+	code, stdout, _ = runCLI(t, "testcases", "-config", tc, "-pipelines", testPipelines, "-json")
+	if code != 1 || !strings.Contains(stdout, `"passed": false`) {
+		t.Errorf("testcases -json: code %d", code)
+	}
+
+	code, stdout, _ = runCLI(t, "bench", "-pipelines", testPipelines, "-frames", "5", "-input", "synthetic/night", "-workers", "2")
+	if code != 0 || !strings.Contains(stdout, "speedup") || !strings.Contains(stdout, "p8") {
+		t.Errorf("bench: code %d\n%s", code, stdout)
+	}
+
+	for _, args := range [][]string{
+		{"experiment", "-config", filepath.Join(dir, "missing.yaml")},
+		{"testcases", "-config", filepath.Join(dir, "missing.yaml")},
+		{"bench", "-pipelines", testPipelines, "-input", "synthetic/ocean"},
+	} {
+		if code, _, _ := runCLI(t, args...); code != 1 {
+			t.Errorf("%v: code %d, want 1", args, code)
+		}
 	}
 }
