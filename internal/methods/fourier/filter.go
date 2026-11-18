@@ -72,7 +72,7 @@ type Filter struct {
 }
 
 func (f Filter) validate() error {
-	if f.Cutoff <= 0 || f.Cutoff > 0.5 {
+	if !(f.Cutoff > 0 && f.Cutoff <= 0.5) { // also rejects NaN
 		return fmt.Errorf("fourier: cutoff %v must be in (0, 0.5] cycles/pixel", f.Cutoff)
 	}
 	switch f.Shape {

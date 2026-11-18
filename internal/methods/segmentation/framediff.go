@@ -2,6 +2,7 @@ package segmentation
 
 import (
 	"fmt"
+	"math"
 
 	"heatmap/internal/imgx"
 )
@@ -27,8 +28,8 @@ type FrameDiff struct {
 
 // NewFrameDiff returns a detector with the given threshold.
 func NewFrameDiff(threshold float32) (*FrameDiff, error) {
-	if threshold <= 0 {
-		return nil, fmt.Errorf("segmentation: frame difference threshold must be positive, got %v", threshold)
+	if !(threshold > 0) || math.IsInf(float64(threshold), 1) { // also rejects NaN
+		return nil, fmt.Errorf("segmentation: frame difference threshold must be positive and finite, got %v", threshold)
 	}
 	return &FrameDiff{Threshold: threshold}, nil
 }

@@ -2,6 +2,7 @@ package segmentation
 
 import (
 	"errors"
+	"math"
 	"testing"
 
 	"heatmap/internal/imgx"
@@ -81,7 +82,9 @@ func TestFrameDiffSizeMismatchAndReset(t *testing.T) {
 }
 
 func TestNewFrameDiffRejectsBadThreshold(t *testing.T) {
-	for _, th := range []float32{0, -5} {
+	nan := float32(math.NaN())
+	inf := float32(math.Inf(1))
+	for _, th := range []float32{0, -5, nan, inf} {
 		if _, err := NewFrameDiff(th); err == nil {
 			t.Errorf("threshold %v: want error", th)
 		}

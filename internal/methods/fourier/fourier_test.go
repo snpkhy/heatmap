@@ -272,6 +272,8 @@ func TestFilterValidation(t *testing.T) {
 	for _, f := range []Filter{
 		{Shape: Gaussian, Cutoff: 0},
 		{Shape: Gaussian, Cutoff: 0.6},
+		{Shape: Gaussian, Cutoff: math.NaN()},
+		{Shape: Butterworth, Cutoff: math.NaN(), Order: 2},
 		{Shape: Butterworth, Cutoff: 0.1, Order: 0},
 		{Shape: Shape(9), Cutoff: 0.1},
 	} {

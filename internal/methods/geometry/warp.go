@@ -49,6 +49,9 @@ func NewWarper(h Homography, srcW, srcH, outW, outH int, interp Interp) (*Warper
 	if interp != Nearest && interp != Bilinear {
 		return nil, fmt.Errorf("geometry: unknown interpolation %d", interp)
 	}
+	if !h.finite() {
+		return nil, fmt.Errorf("%w: homography has NaN or infinite entries", ErrDegenerate)
+	}
 	inv, err := h.Inverse()
 	if err != nil {
 		return nil, err
@@ -70,8 +73,9 @@ func NewWarper(h Homography, srcW, srcH, outW, outH int, interp Interp) (*Warper
 			}
 			wp.inside[i] = true
 			if interp == Nearest {
-				wp.sx[i] = int32(min(int(math.Round(p.X)), srcW-1))
-				wp.sy[i] = int32(min(int(math.Round(p.Y)), srcH-1))
+				// Positions in [−0.5, 0) round to −1: clamp them onto pixel 0.
+				wp.sx[i] = int32(min(max(int(math.Round(p.X)), 0), srcW-1))
+				wp.sy[i] = int32(min(max(int(math.Round(p.Y)), 0), srcH-1))
 				continue
 			}
 			x0, y0 := math.Floor(p.X), math.Floor(p.Y)

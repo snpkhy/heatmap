@@ -91,4 +91,7 @@ func TestNewDirectionHistogramErrors(t *testing.T) {
 	if _, err := NewDirectionHistogram(8, -1, false); err == nil {
 		t.Error("negative magnitude: want error")
 	}
+	if _, err := NewDirectionHistogram(8, math.NaN(), false); err == nil {
+		t.Error("NaN magnitude: want error")
+	}
 }

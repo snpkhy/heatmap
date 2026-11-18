@@ -212,3 +212,66 @@ func TestWarperReuseAndErrors(t *testing.T) {
 		t.Error("singular homography: want error")
 	}
 }
+
+func TestHomographyFarFromOrigin(t *testing.T) {
+	// Regression: degeneracy was judged on raw coordinates, so valid
+	// configurations a few thousand pixels from the origin were rejected.
+	far := [4]Point{{8000, 4000}, {8032, 4000}, {8032, 4032}, {8000, 4032}}
+	h, err := HomographyFromPoints(far, far)
+	if err != nil {
+		t.Fatalf("identical far squares: %v", err)
+	}
+	for i := range h {
+		if math.Abs(h[i]-Identity[i]) > 1e-9 {
+			t.Fatalf("h = %v, want identity", h)
+		}
+	}
+
+	shifted := [4]Point{{3000, 3000}, {3001, 3000}, {3001, 3001}, {3000, 3001}}
+	h, err = HomographyFromPoints(unitSquare, shifted)
+	if err != nil {
+		t.Fatalf("unit square shifted by 3000: %v", err)
+	}
+	if q := mustApply(t, h, Point{0.5, 0.5}); !nearPt(q, Point{3000.5, 3000.5}) {
+		t.Errorf("centre maps to %v, want (3000.5, 3000.5)", q)
+	}
+}
+
+func TestHomographyRejectsNonFiniteAndCoincidentPoints(t *testing.T) {
+	nan := [4]Point{{math.NaN(), 0}, {1, 0}, {1, 1}, {0, 1}}
+	inf := [4]Point{{0, 0}, {math.Inf(1), 0}, {1, 1}, {0, 1}}
+	same := [4]Point{{2, 2}, {2, 2}, {2, 2}, {2, 2}}
+	for name, pts := range map[string][4]Point{"NaN": nan, "Inf": inf, "coincident": same} {
+		if _, err := HomographyFromPoints(pts, unitSquare); !errors.Is(err, ErrDegenerate) {
+			t.Errorf("%s source: err = %v, want ErrDegenerate", name, err)
+		}
+		if _, err := HomographyFromPoints(unitSquare, pts); !errors.Is(err, ErrDegenerate) {
+			t.Errorf("%s target: err = %v, want ErrDegenerate", name, err)
+		}
+	}
+}
+
+func TestWarpNearestNegativeHalfPixel(t *testing.T) {
+	// Regression: output (0, 0) reads source x = −0.5, which math.Round
+	// turns into −1, indexing Pix[−1].
+	src, _ := imgx.GrayFromSlice(2, 2, []float32{10, 20, 30, 40})
+	h := Homography{1, 0, 0.5, 0, 1, 0, 0, 0, 1}
+	got, err := Warp(src, h, 2, 2, Nearest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.At(0, 0) != 10 || got.At(0, 1) != 30 {
+		t.Errorf("left column = %v, %v, want the source's left column 10, 30", got.At(0, 0), got.At(0, 1))
+	}
+}
+
+func TestNewWarperRejectsNonFiniteHomography(t *testing.T) {
+	for _, h := range []Homography{
+		{math.NaN(), 0, 0, 0, 1, 0, 0, 0, 1},
+		{1, 0, math.Inf(1), 0, 1, 0, 0, 0, 1},
+	} {
+		if _, err := NewWarper(h, 4, 4, 4, 4, Nearest); !errors.Is(err, ErrDegenerate) {
+			t.Errorf("%v: err = %v, want ErrDegenerate", h, err)
+		}
+	}
+}
