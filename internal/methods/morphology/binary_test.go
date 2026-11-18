@@ -144,6 +144,32 @@ func TestClosingJoinsFragments(t *testing.T) {
 	))
 }
 
+func TestOpeningRemovesNoise(t *testing.T) {
+	// A small 1-pixel noise dot disappears, while a large 3x3 block survives.
+	src := parseMask(t,
+		".........",
+		"..#......",
+		".........",
+		"....###..",
+		"....###..",
+		"....###..",
+		".........",
+	)
+	got, err := Opening(src, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertMask(t, got, parseMask(t,
+		".........",
+		".........",
+		".........",
+		"....###..",
+		"....###..",
+		"....###..",
+		".........",
+	))
+}
+
 func TestMorphologyRejectsBadWindow(t *testing.T) {
 	src := imgx.NewGray(2, 2)
 	for _, k := range []int{0, -1, 2} {
@@ -155,6 +181,9 @@ func TestMorphologyRejectsBadWindow(t *testing.T) {
 		}
 		if _, err := Closing(src, k); err == nil {
 			t.Errorf("Closing k=%d: expected an error", k)
+		}
+		if _, err := Opening(src, k); err == nil {
+			t.Errorf("Opening k=%d: expected an error", k)
 		}
 	}
 }
