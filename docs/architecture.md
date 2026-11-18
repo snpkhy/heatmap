@@ -1,21 +1,63 @@
 # Architecture
 
-> Full write-up comes in stage 12. This file records the decisions made so far.
-
 ## Data flow
 
 ```
-dataset ──► pipeline (stages from methods/*) ──► heatmap ──► metrics ──► report ──► results/<run_id>/
-                                                                                         │
-                                                       analysis/ (Python plots) ◄────────┤
-                                                       web UI (via HTTP API)    ◄────────┘
+dataset ──► noise ──► pipeline (stages from methods/*) ──► mask ──┬──► metrics (vs ground truth)
+                                                                   ├──► heatmap (camera / floor plan)
+                                                                   └──► report ──► results/<run_id>/
+                                                                                        │
+                                                      analysis/ (Python plots) ◄────────┤
+                                                      web UI (via HTTP API)    ◄────────┘
 ```
 
-All image processing lives in Go. The CLI and the web UI are two front-ends over the same `pipeline.Runner`.
+All image processing lives in Go. The CLI (`cmd/heatmap`) and the web UI are two front-ends over the same `pipeline.Run`.
+
+## Packages
+
+| Package | Role |
+|---|---|
+| `imgx` | own `Gray`/`RGB` float32 images, PNG/JPEG/BMP I/O |
+| `methods/<category>` | the hand-written methods; no dependency on the rest |
+| `pipeline` | `Frame`, `Stage`, method registry and adapters, `Build`, `Run` |
+| `dataset` | `Sequence` implementations: CDnet, frame folders, synthetic scenes |
+| `noise` | seeded Gaussian and salt-and-pepper noise |
+| `heatmap` | activity accumulator with decay, colour maps, overlay |
+| `metrics` | MSE, PSNR, SSIM, confusion counts against CDnet labels, timing |
+| `report` | `metrics.csv`, `summary.csv`, `run.json` |
+| `config` | strict YAML for pipelines, experiments, test cases |
+| `experiment` | worker pool over many runs, test case checks, benchmark |
+| `server` | HTTP API with Server-Sent Events, embedded UI |
+
+## The pipeline model
+
+A pipeline is a list of stages. Every frame becomes a `pipeline.Frame` that flows through them:
+
+| Field | Written by | Read by |
+|---|---|---|
+| `RGB` | runner (after noise) | color stages |
+| `Image` | runner (luma), filtering, histogram, edges, texture, fourier | most stages |
+| `Channels` | color stages, `equalize` (with `channel`) | `gaussian_bg` |
+| `Mask` | segmentation, `sobel_diff`, `block_change`, `block_matching` | morphology, `components`, `perspective_warp`, metrics, heatmap |
+| `Plan` | `perspective_warp` | floor-plan heatmap |
+| `Corners` | `harris` | `block_matching` (in the next frame) |
+| `Vectors` | `block_matching` | `direction_histogram` |
+
+Each stage returns an image of its output for the frame viewer. Stateful stages (background models, trackers, LBP background) keep state between frames; `Reset` clears it, and every run builds its own pipeline, so parallel runs never share state.
+
+Methods register in `internal/pipeline/stages.go` with a name, a category and a constructor. Constructors read their parameters through `Params` getters that take the default and a help text, so `heatmap list`, `/api/methods` and [methods.md](methods.md) all come from that one place. `Build` rejects unknown methods and parameters, invalid values and pipelines with fewer than 3 stages or 3 categories, before any frame is processed.
+
+Parallelism is across runs (pipelines × sequences × noise levels), not across the frames of one run, because most stages depend on the previous frames.
+
+## Metrics
+
+- Masks are compared with CDnet labels: 255 motion, 50 shadow (background), 0 static; 85 (outside ROI) and 170 (unknown) are ignored. Confusion counts are summed over all evaluated frames before precision/recall/F1/IoU are computed.
+- Stages marked *denoise* (filtering, fourier) are compared with the luma of the clean frame (MSE, PSNR, SSIM) to measure how much of the synthetic noise they remove.
+- FPS counts processing time only (all stages), not decoding, metrics or file output.
 
 ## Web UI
 
-`heatmap serve` starts an HTTP server on localhost that exposes a JSON API and serves the UI.
+`heatmap serve` starts an HTTP server (127.0.0.1:8080 by default) that exposes a JSON API and serves the UI.
 
 | Part | Choice |
 |---|---|
@@ -26,8 +68,6 @@ All image processing lives in Go. The CLI and the web UI are two front-ends over
 | Lint/format | Biome |
 | Tests | Vitest |
 
-Layout:
-
 ```
 internal/server/   HTTP handlers and JSON API (standard net/http)
 web/               Vite project
@@ -35,20 +75,23 @@ web/dist/          production build output
 web/embed.go       //go:embed all:dist — the built UI is embedded into the Go binary
 ```
 
-- Development: run the Go API on :8080 (`heatmap serve`, once implemented) and `make web-dev` for the Vite dev server on :5173, which proxies `/api` to Go.
+- Development: `go run ./cmd/heatmap serve` on :8080 and `make web-dev` for the Vite dev server on :5173, which proxies `/api` to Go.
 - Production: `make build` builds the frontend first, then Go; the result is a single `heatmap` binary.
 - `web/dist/.gitkeep` is committed so `go build` works even before the UI has been built.
 - The UI never processes images. It only starts runs and displays what the API returns.
+- Routing uses the URL hash (`#/runs/<id>`), so no router dependency and no server-side routes are needed.
 
-Planned API:
+API:
 
 | Endpoint | Purpose |
 |---|---|
+| `GET /api/health` | version |
 | `GET /api/methods`, `/api/pipelines`, `/api/sequences` | what can be run |
-| `POST /api/runs` | start a run (pipeline + sequence + noise), returns `run_id` |
+| `GET /api/sequences/preview?id=&frame=` | one frame of a sequence as PNG |
+| `POST /api/runs` | start a run (pipeline + sequence + noise + frames), returns `run_id` |
+| `GET /api/runs`, `GET /api/runs/{id}` | list and details (runs on disk are included after a restart) |
 | `GET /api/runs/{id}/events` | live progress (Server-Sent Events) |
-| `GET /api/runs/{id}/...` | stage frames, masks, heatmap, metrics |
+| `GET /api/runs/{id}/files/{file...}` | heatmaps, stage images, CSV files of a run |
+| `DELETE /api/runs/{id}` | cancel an active run or delete a finished one |
 
-Screens: run launcher, frame viewer (original / stages / mask / ground truth / heatmap), metrics, run comparison, and optionally live webcam mode (stage 13).
-
-Timeline: `serve` skeleton with the launcher and viewer after stage 4, the heatmap view after stage 6, metrics and comparison after stage 9.
+Requests can only name sequences inside the data directory and pipelines from the pipelines directory; run files are opened through `os.Root`, so paths cannot escape a run directory.

@@ -7,4 +7,4 @@ The repository structure, infrastructure (Makefile, CI, Dockerfile, linter confi
 | Tool | Key prompts | Generated parts | Reviewed by | How it was checked |
 |---|---|---|---|---|
 | Claude Code | "Scaffold the repository from the brief" | folder layout, `Makefile`, `.golangci.yml`, CI, `Dockerfile`, doc templates | … | review, `make test lint` |
-| | | | | |
+| Claude Code | "Implement the pipelines p5 and p6", "make everything work end to end, including the UI" | methods for p5/p6 (`fourier`, `geometry`, `keypoints`, frame differencing, direction histogram); `pipeline`, `dataset`, `noise`, `heatmap`, `config`, `report`, `experiment`, `server` packages; CLI commands; `configs/`; `analysis/plots.py`, `compare.py`; web UI pages; docs | … | `go test -race`, `golangci-lint`, `heatmap testcases`, pytest, vitest, manual runs of the CLI and the UI |
