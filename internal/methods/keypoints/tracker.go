@@ -2,6 +2,7 @@ package keypoints
 
 import (
 	"fmt"
+	"math"
 
 	"heatmap/internal/imgx"
 )
@@ -48,9 +49,9 @@ func (c TrackerConfig) validate() error {
 		return fmt.Errorf("keypoints: tracker Block %d must be odd and at least 3", c.Block)
 	case c.Search < 1:
 		return fmt.Errorf("keypoints: tracker Search %d must be at least 1", c.Search)
-	case c.MaxCost <= 0:
+	case !(c.MaxCost > 0): // also rejects NaN
 		return fmt.Errorf("keypoints: tracker MaxCost %v must be positive", c.MaxCost)
-	case c.MinMotion < 0 || c.MaskRadius < 0:
+	case !(c.MinMotion >= 0) || math.IsInf(c.MinMotion, 1) || c.MaskRadius < 0:
 		return fmt.Errorf("keypoints: tracker MinMotion %v and MaskRadius %d must not be negative",
 			c.MinMotion, c.MaskRadius)
 	}

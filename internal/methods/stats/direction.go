@@ -31,7 +31,7 @@ func NewDirectionHistogram(bins int, minMagnitude float64, weighted bool) (*Dire
 	if bins < 2 {
 		return nil, fmt.Errorf("stats: direction histogram needs at least 2 bins, got %d", bins)
 	}
-	if minMagnitude < 0 {
+	if !(minMagnitude >= 0) { // also rejects NaN
 		return nil, fmt.Errorf("stats: minimum magnitude %v must not be negative", minMagnitude)
 	}
 	return &DirectionHistogram{Bins: make([]float64, bins), MinMagnitude: minMagnitude, Weighted: weighted}, nil

@@ -38,15 +38,31 @@ var Identity = Homography{1, 0, 0, 0, 1, 0, 0, 0, 1}
 //
 // and the 8×8 system is solved by Gaussian elimination with partial
 // pivoting. It returns ErrDegenerate if three points of either quadrilateral
-// are collinear.
+// are collinear or a coordinate is NaN or infinite.
+//
+// Both point sets are first normalised (Hartley): moved so their centroid is
+// at the origin and scaled so their mean distance from it is √2. Without
+// this, products like x·u reach 10⁷ for points a few thousand pixels from the
+// origin, the system becomes badly conditioned, and whether a configuration
+// counts as degenerate would depend on where the points are rather than on
+// their shape. The result is denormalised as H = T_dst⁻¹ · Ĥ · T_src.
 //
 // In p5 src are four floor points marked in the camera image (e.g. the
 // corners of a parking lot) and dst the same points on the floor plan.
 func HomographyFromPoints(src, dst [4]Point) (Homography, error) {
+	tSrc, err := normalizer(src)
+	if err != nil {
+		return Homography{}, err
+	}
+	tDst, err := normalizer(dst)
+	if err != nil {
+		return Homography{}, err
+	}
 	var a [8][9]float64 // augmented matrix [A | b]
 	for i := range 4 {
-		x, y := src[i].X, src[i].Y
-		u, v := dst[i].X, dst[i].Y
+		p, _ := tSrc.Apply(src[i])
+		q, _ := tDst.Apply(dst[i])
+		x, y, u, v := p.X, p.Y, q.X, q.Y
 		a[2*i] = [9]float64{x, y, 1, 0, 0, 0, -x * u, -y * u, u}
 		a[2*i+1] = [9]float64{0, 0, 0, x, y, 1, -x * v, -y * v, v}
 	}
@@ -54,19 +70,66 @@ func HomographyFromPoints(src, dst [4]Point) (Homography, error) {
 	if err != nil {
 		return Homography{}, err
 	}
-	var h Homography
-	copy(h[:8], sol[:])
-	h[8] = 1
+	var hn Homography
+	copy(hn[:8], sol[:])
+	hn[8] = 1
 	// Collinear target points still give a solvable system, but the result
-	// squashes the plane onto a line: det H = 0.
+	// squashes the plane onto a line: det H = 0. In normalised coordinates the
+	// entries of a valid Ĥ are of order 1, so a fixed relative tolerance works.
 	var norm float64
-	for _, v := range h {
+	for _, v := range hn {
 		norm = max(norm, math.Abs(v))
 	}
-	if math.Abs(h.det()) <= 1e-10*norm*norm*norm {
+	if !(math.Abs(hn.det()) > 1e-9*norm*norm*norm) {
 		return Homography{}, ErrDegenerate
 	}
+
+	tDstInv, err := tDst.Inverse()
+	if err != nil {
+		return Homography{}, err
+	}
+	h := tDstInv.Mul(hn).Mul(tSrc)
+	scale := h[8]
+	if math.Abs(scale) < 1e-12 {
+		// The origin maps to infinity; any non-zero scale is valid.
+		scale = norm
+	}
+	for i := range h {
+		h[i] /= scale
+	}
 	return h, nil
+}
+
+// normalizer returns the similarity transform that moves the centroid of pts
+// to the origin and scales their mean distance from it to √2.
+func normalizer(pts [4]Point) (Homography, error) {
+	var cx, cy float64
+	for _, p := range pts {
+		if math.IsNaN(p.X) || math.IsNaN(p.Y) || math.IsInf(p.X, 0) || math.IsInf(p.Y, 0) {
+			return Homography{}, fmt.Errorf("%w: point %v is not finite", ErrDegenerate, p)
+		}
+		cx += p.X / 4
+		cy += p.Y / 4
+	}
+	var mean float64
+	for _, p := range pts {
+		mean += math.Hypot(p.X-cx, p.Y-cy) / 4
+	}
+	if !(mean > 0) {
+		return Homography{}, fmt.Errorf("%w: all points coincide", ErrDegenerate)
+	}
+	s := math.Sqrt2 / mean
+	return Homography{s, 0, -s * cx, 0, s, -s * cy, 0, 0, 1}, nil
+}
+
+// finite reports whether every entry is a finite number.
+func (h Homography) finite() bool {
+	for _, v := range h {
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return false
+		}
+	}
+	return true
 }
 
 func (h Homography) det() float64 {
@@ -134,7 +197,7 @@ func (h Homography) Inverse() (Homography, error) {
 		h[3]*h[7] - h[4]*h[6], h[1]*h[6] - h[0]*h[7], h[0]*h[4] - h[1]*h[3],
 	}
 	det := h[0]*inv[0] + h[1]*inv[3] + h[2]*inv[6]
-	if math.Abs(det) < 1e-12 {
+	if !(math.Abs(det) >= 1e-12) || math.IsInf(det, 0) { // also rejects NaN
 		return Homography{}, fmt.Errorf("%w: singular homography", ErrDegenerate)
 	}
 	norm := det

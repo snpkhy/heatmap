@@ -52,13 +52,14 @@ func DefaultHarrisConfig() HarrisConfig {
 
 func (c HarrisConfig) validate() error {
 	switch {
-	case c.K <= 0 || c.K >= 0.25:
+	// Comparisons are written so that NaN fails them.
+	case !(c.K > 0 && c.K < 0.25):
 		return fmt.Errorf("keypoints: Harris K %v must be in (0, 0.25)", c.K)
-	case c.Sigma <= 0:
-		return fmt.Errorf("keypoints: Harris Sigma %v must be positive", c.Sigma)
-	case c.Quality <= 0 || c.Quality > 1:
+	case !(c.Sigma > 0 && c.Sigma <= 50):
+		return fmt.Errorf("keypoints: Harris Sigma %v must be in (0, 50]", c.Sigma)
+	case !(c.Quality > 0 && c.Quality <= 1):
 		return fmt.Errorf("keypoints: Harris Quality %v must be in (0, 1]", c.Quality)
-	case c.MinResponse < 0:
+	case !(c.MinResponse >= 0):
 		return fmt.Errorf("keypoints: Harris MinResponse %v must not be negative", c.MinResponse)
 	case c.MinDistance < 0 || c.MaxCorners < 0:
 		return fmt.Errorf("keypoints: MinDistance %d and MaxCorners %d must not be negative",

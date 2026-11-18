@@ -2,6 +2,7 @@ package keypoints
 
 import (
 	"errors"
+	"math"
 	"math/rand/v2"
 	"testing"
 
@@ -158,6 +159,11 @@ func TestHarrisConfigValidation(t *testing.T) {
 		func(c *HarrisConfig) { c.Quality = 0 },
 		func(c *HarrisConfig) { c.Quality = 1.5 },
 		func(c *HarrisConfig) { c.MinResponse = -1 },
+		func(c *HarrisConfig) { c.K = float32(math.NaN()) },
+		func(c *HarrisConfig) { c.Sigma = float32(math.NaN()) },
+		func(c *HarrisConfig) { c.Sigma = float32(math.Inf(1)) },
+		func(c *HarrisConfig) { c.Quality = float32(math.NaN()) },
+		func(c *HarrisConfig) { c.MinResponse = float32(math.NaN()) },
 		func(c *HarrisConfig) { c.MinDistance = -1 },
 		func(c *HarrisConfig) { c.MaxCorners = -1 },
 	}
@@ -303,6 +309,9 @@ func TestTrackerConfigValidation(t *testing.T) {
 		func(c *TrackerConfig) { c.MaxCost = 0 },
 		func(c *TrackerConfig) { c.MinMotion = -1 },
 		func(c *TrackerConfig) { c.MaskRadius = -1 },
+		func(c *TrackerConfig) { c.MaxCost = float32(math.NaN()) },
+		func(c *TrackerConfig) { c.MinMotion = math.NaN() },
+		func(c *TrackerConfig) { c.MinMotion = math.Inf(1) },
 		func(c *TrackerConfig) { c.Harris.Sigma = 0 },
 	}
 	for i, f := range bad {
