@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Download CDnet 2014 and unpack selected sequences into data/cdnet/<category>/<sequence>/.
+# Download CDnet 2014 sequences into data/cdnet/<category>/<sequence>/.
 #
 # Usage: scripts/download_cdnet.sh [category/sequence ...]
-#   With no arguments the sequences used by the experiments are unpacked.
+#   With no arguments the sequences used by the experiments are downloaded.
 #
-# CDnet is distributed as one large archive (several GB). It is downloaded
-# once to data/cdnet/dataset2014.zip and kept, so picking other sequences
-# later does not download it again. Set CDNET_URL to use a mirror, or put
-# the archive there yourself and the download is skipped.
+# Every sequence is its own archive (16–220 MB), so only what is asked for is
+# downloaded. Archives are kept in data/cdnet/.archives and reused; delete
+# that folder to free the space. Set CDNET_URL to use a mirror with the same
+# layout (<CDNET_URL>/<category>/<sequence>.zip).
 set -euo pipefail
 
-CDNET_URL="${CDNET_URL:-http://jacarini.dinf.usherbrooke.ca/static/dataset/dataset2014.zip}"
+CDNET_URL="${CDNET_URL:-https://changedetection.net/static/dataset}"
 DEST="${DEST:-data/cdnet}"
-ZIP="$DEST/dataset2014.zip"
+ARCHIVES="$DEST/.archives"
 
 if [[ $# -gt 0 ]]; then
   sequences=("$@")
@@ -30,30 +30,39 @@ else
 fi
 
 command -v unzip >/dev/null || { echo "unzip not found, please install it" >&2; exit 1; }
-mkdir -p "$DEST"
-
-if [[ ! -s "$ZIP" ]]; then
-  command -v curl >/dev/null || { echo "curl not found, please install it" >&2; exit 1; }
-  echo "Downloading CDnet 2014 from $CDNET_URL (large, resumable) ..."
-  curl -fL --retry 3 -C - -o "$ZIP.part" "$CDNET_URL"
-  mv "$ZIP.part" "$ZIP"
-fi
+command -v curl >/dev/null || { echo "curl not found, please install it" >&2; exit 1; }
+mkdir -p "$ARCHIVES"
 
 for seq in "${sequences[@]}"; do
+  if [[ ! "$seq" =~ ^[A-Za-z0-9_]+/[A-Za-z0-9_]+$ ]]; then
+    echo "expected category/sequence, got: $seq" >&2
+    exit 1
+  fi
   if [[ -d "$DEST/$seq/input" ]]; then
     echo "already there: $seq"
     continue
   fi
+  category="${seq%%/*}"
+  name="${seq##*/}"
+  zip="$ARCHIVES/$category-$name.zip"
+  if [[ ! -s "$zip" ]]; then
+    echo "downloading $seq"
+    if ! curl -fL --retry 3 -C - -o "$zip.part" "$CDNET_URL/$seq.zip"; then
+      echo "could not download $CDNET_URL/$seq.zip" >&2
+      exit 1
+    fi
+    mv "$zip.part" "$zip"
+  fi
   echo "unpacking $seq"
-  # Archive entries are dataset/<category>/<sequence>/...; strip "dataset/".
+  # The archive holds <sequence>/input, <sequence>/groundtruth, …
   tmp="$(mktemp -d)"
-  if ! unzip -q "$ZIP" "dataset/$seq/*" -d "$tmp"; then
+  if ! unzip -q "$zip" -d "$tmp" || [[ ! -d "$tmp/$name/input" ]]; then
     rm -rf "$tmp"
-    echo "not found in the archive: $seq" >&2
+    echo "unexpected archive layout: $zip" >&2
     exit 1
   fi
-  mkdir -p "$DEST/$(dirname "$seq")"
-  mv "$tmp/dataset/$seq" "$DEST/$seq"
+  mkdir -p "$DEST/$category"
+  mv "$tmp/$name" "$DEST/$seq"
   rm -rf "$tmp"
 done
 
