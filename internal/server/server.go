@@ -73,12 +73,14 @@ type Server struct {
 
 // liveRun is a run started by this server process.
 type liveRun struct {
-	ID        string             `json:"run_id"`
-	Status    string             `json:"status"`
-	Error     string             `json:"error,omitempty"`
-	Progress  pipeline.Progress  `json:"progress"`
-	Request   RunRequest         `json:"request"`
-	CreatedAt time.Time          `json:"created_at"`
+	ID        string            `json:"run_id"`
+	Status    string            `json:"status"`
+	Error     string            `json:"error,omitempty"`
+	Progress  pipeline.Progress `json:"progress"`
+	Request   RunRequest        `json:"request"`
+	CreatedAt time.Time         `json:"created_at"`
+	scene     dataset.Info
+	start     int
 	cancel    context.CancelFunc `json:"-"`
 	subs      map[chan event]struct{}
 }
@@ -253,7 +255,7 @@ func (s *Server) startRun(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithCancel(s.ctx)
 	lr := &liveRun{ID: opts.RunID, Status: StatusQueued, Request: req, CreatedAt: time.Now().UTC(),
-		cancel: cancel, subs: map[chan event]struct{}{},
+		cancel: cancel, subs: map[chan event]struct{}{}, scene: opts.Sequence.Info(), start: opts.Start,
 		Progress: pipeline.Progress{RunID: opts.RunID, Total: opts.Frames}}
 	s.mu.Lock()
 	s.runs[lr.ID] = lr
@@ -431,7 +433,18 @@ type RunDetail struct {
 	Status   string             `json:"status"`
 	Error    string             `json:"error,omitempty"`
 	Progress *pipeline.Progress `json:"progress,omitempty"`
-	Run      *report.Run        `json:"run,omitempty"`
+	// Live describes a run started by this server, so the UI can show its
+	// frames while it is still being processed.
+	Live *LiveInfo   `json:"live,omitempty"`
+	Run  *report.Run `json:"run,omitempty"`
+}
+
+// LiveInfo is what the UI needs to follow a run before run.json exists.
+type LiveInfo struct {
+	Request RunRequest   `json:"request"`
+	Scene   dataset.Info `json:"scene"`
+	// Start is the first frame of the run; frames are saved under frames/<n>/.
+	Start int `json:"start"`
 }
 
 func (s *Server) runID(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -453,7 +466,8 @@ func (s *Server) getRun(w http.ResponseWriter, r *http.Request) {
 	var detail RunDetail
 	if lr != nil {
 		p := lr.Progress
-		detail = RunDetail{ID: id, Status: lr.Status, Error: lr.Error, Progress: &p}
+		detail = RunDetail{ID: id, Status: lr.Status, Error: lr.Error, Progress: &p,
+			Live: &LiveInfo{Request: lr.Request, Scene: lr.scene, Start: lr.start}}
 	}
 	s.mu.Unlock()
 	if lr == nil || detail.Status == StatusDone {
