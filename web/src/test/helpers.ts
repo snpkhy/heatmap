@@ -45,6 +45,9 @@ export const pipelines: PipelineInfo[] = [
   { id: "p9", name: "Broken", stages: [], stage_info: null, error: "unknown method" },
 ];
 
+/** A second working detection mode, for tests that switch between modes. */
+export const shadows: PipelineInfo = { ...pipelines[0], id: "p7", name: "Shadows" };
+
 export const sequences: SequenceInfo[] = [
   {
     id: "synthetic/street",

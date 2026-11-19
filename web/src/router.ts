@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-// A tiny hash router: #/ (new run), #/runs, #/runs/<id>, #/compare.
+// A tiny hash router: #/ (scenes), #/runs (history), #/runs/<id> (viewer), #/compare.
 // Hash routes need no server support and no extra dependency.
 
 export type Route =

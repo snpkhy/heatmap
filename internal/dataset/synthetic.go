@@ -17,7 +17,8 @@ const (
 )
 
 // object is a textured rectangle moving at constant velocity between frames
-// t0 and t1 (inclusive).
+// t0 and t1 (inclusive). With person set it is drawn as a walking figure
+// instead: see person.go.
 type object struct {
 	w, h           int
 	x0, y0, vx, vy float64 // top-left corner at frame t0, pixels per frame
@@ -28,6 +29,11 @@ type object struct {
 	// background is multiplied by shadow (0 = no shadow).
 	shadowDX, shadowDY int
 	shadow             float32
+	// person draws a walking figure: (x0, y0) is then the point between the
+	// feet, h the height of the figure at the bottom edge of the frame (it
+	// shrinks with distance), color the clothes, pants and skin the rest.
+	person      bool
+	pants, skin [3]float32
 }
 
 // scene describes a built-in synthetic sequence.
@@ -77,6 +83,7 @@ var scenes = map[string]scene{
 				shadowDX: 6, shadowDY: 20, shadow: 0.5},
 		},
 	},
+	"plaza": plaza,
 	"night": {
 		name:        "night",
 		description: "Dark low-contrast scene with two dim objects moving in opposite directions",
@@ -180,6 +187,10 @@ func (s *Synthetic) render(t int) (*imgx.RGB, *imgx.Gray) {
 	f := s.bg.Clone()
 	gt := imgx.NewGray(s.sc.w, s.sc.h)
 	for _, o := range s.sc.objects {
+		if o.person {
+			s.personShadow(o, t, f, gt)
+			continue
+		}
 		if x, y, ok := o.at(t); ok && o.shadow > 0 {
 			s.fill(x+o.shadowDX, y+o.shadowDY, o.w, o.h, func(_, _, i int) {
 				f.R[i] *= o.shadow
@@ -190,6 +201,10 @@ func (s *Synthetic) render(t int) (*imgx.RGB, *imgx.Gray) {
 		}
 	}
 	for _, o := range s.sc.objects {
+		if o.person {
+			s.person(o, t, f, gt)
+			continue
+		}
 		x, y, ok := o.at(t)
 		if !ok {
 			continue

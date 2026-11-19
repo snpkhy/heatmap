@@ -9,6 +9,10 @@ class ResizeObserverStub {
 }
 vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 
+// jsdom has no canvas: the stage and the frame store then simply draw nothing.
+HTMLCanvasElement.prototype.getContext = (() =>
+  null) as typeof HTMLCanvasElement.prototype.getContext;
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

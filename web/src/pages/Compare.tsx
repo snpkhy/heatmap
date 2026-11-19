@@ -1,6 +1,5 @@
 import Alert from "@mui/material/Alert";
-import Card from "@mui/material/Card";
-import CardContent from "@mui/material/CardContent";
+import Box from "@mui/material/Box";
 import Link from "@mui/material/Link";
 import Paper from "@mui/material/Paper";
 import Stack from "@mui/material/Stack";
@@ -13,19 +12,22 @@ import TableRow from "@mui/material/TableRow";
 import Typography from "@mui/material/Typography";
 import { BarChart } from "@mui/x-charts/BarChart";
 import { useEffect, useState } from "react";
-import { api, type Summary } from "../api";
+import { api, runFile, type Summary } from "../api";
 import { decibels, fps, metric, noiseLabel } from "../format";
+import { type Messages, messages, useT } from "../i18n";
 import { useSeriesColors } from "../palette";
 import { routeHref } from "../router";
+import { fonts } from "../theme";
 
-/** Short label of a run for chart axes: pipeline, sequence name, noise. */
-export function runLabel(s: Summary): string {
-  const seq = s.sequence.split("/").pop();
-  const n = noiseLabel(s.noise);
-  return `${s.pipeline} · ${seq}${n === "none" ? "" : ` · ${n}`}`;
+/** Short label of an analysis for chart axes: scene, detection mode, noise. */
+export function runLabel(s: Summary, t: Messages = messages.en): string {
+  const n = noiseLabel(s.noise, t.noise);
+  const mode = t.modeName(s.pipeline, s.pipeline_name);
+  return `${t.sceneTitle(s.sequence)} · ${mode}${n === t.noise.none ? "" : ` · ${n}`}`;
 }
 
 export function Compare({ ids }: { ids: string[] }) {
+  const t = useT();
   const colors = useSeriesColors();
   const [summaries, setSummaries] = useState<Summary[] | null>(null);
   const [error, setError] = useState("");
@@ -46,77 +48,135 @@ export function Compare({ ids }: { ids: string[] }) {
   if (summaries.length === 0) {
     return (
       <Alert severity="info">
-        Nothing to compare yet. Finish a few runs, then pick them on the{" "}
-        <Link href={routeHref({ page: "runs" })}>runs page</Link>.
+        {t.compare.empty[0]}
+        <Link href={routeHref({ page: "runs" })}>{t.compare.empty[1]}</Link>
+        {t.compare.empty[2]}
       </Alert>
     );
   }
-  const labels = summaries.map(runLabel);
-  const val = (v: number | null) => v;
+  const labels = summaries.map((s) => runLabel(s, t));
+  const scored = summaries.some((s) => s.f1 !== null);
   return (
     <Stack spacing={3}>
-      <Typography variant="h5" component="h2">
-        Compare runs
-      </Typography>
-      {ids.length === 0 && (
-        <Typography color="text.secondary">
-          Showing the latest finished runs. Select specific runs on the{" "}
-          <Link href={routeHref({ page: "runs" })}>runs page</Link>.
+      <Box>
+        <Typography variant="h2" component="h2" sx={{ fontSize: { xs: 34, md: 42 } }}>
+          {t.compare.title}
         </Typography>
-      )}
-      <Card variant="outlined">
-        <CardContent>
-          <Typography variant="subtitle1">Mask quality</Typography>
+        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+          {t.compare.lead(ids.length === 0)}
+          {t.compare.chooseOthers[0]}
+          <Link href={routeHref({ page: "runs" })}>{t.compare.chooseOthers[1]}</Link>
+          {t.compare.chooseOthers[2]}
+        </Typography>
+      </Box>
+      <Box
+        sx={{
+          display: "grid",
+          gap: 2,
+          gridTemplateColumns: {
+            xs: "repeat(2, 1fr)",
+            md: `repeat(${Math.min(summaries.length, 4)}, 1fr)`,
+          },
+        }}
+      >
+        {summaries.map((s) => (
+          <Link
+            key={s.run_id}
+            href={routeHref({ page: "run", id: s.run_id })}
+            underline="none"
+            color="inherit"
+            sx={{
+              display: "block",
+              borderRadius: "16px",
+              overflow: "hidden",
+              border: 1,
+              borderColor: "divider",
+              bgcolor: "background.paper",
+              transition: "border-color .2s",
+              "&:hover": { borderColor: "primary.main" },
+            }}
+          >
+            <Box
+              component="img"
+              src={runFile(s.run_id, "heatmap.png")}
+              alt={t.compare.heatmapOf(runLabel(s, t))}
+              loading="lazy"
+              sx={{ width: "100%", display: "block", bgcolor: "#07060a" }}
+            />
+            <Box sx={{ p: 1.5 }}>
+              <Typography
+                sx={{
+                  fontFamily: fonts.display,
+                  fontSize: 19,
+                  fontWeight: 600,
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1.2,
+                }}
+              >
+                {t.sceneTitle(s.sequence)}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t.modeName(s.pipeline, s.pipeline_name)}
+                {noiseLabel(s.noise, t.noise) !== t.noise.none &&
+                  ` · ${t.viewer.withNoise(noiseLabel(s.noise, t.noise))}`}
+              </Typography>
+            </Box>
+          </Link>
+        ))}
+      </Box>
+      {scored && (
+        <Paper variant="outlined" sx={{ p: 2, borderRadius: "16px" }}>
+          <Typography variant="subtitle1">{t.compare.accuracy}</Typography>
           <BarChart
             height={340}
             xAxis={[{ data: labels, scaleType: "band", tickLabelStyle: { fontSize: 11 } }]}
             yAxis={[{ min: 0, max: 1 }]}
             series={[
-              { data: summaries.map((s) => val(s.f1)), label: "F1", color: colors[0] },
+              { data: summaries.map((s) => s.f1), label: t.metrics.f1, color: colors[0] },
               {
-                data: summaries.map((s) => val(s.precision)),
-                label: "precision",
+                data: summaries.map((s) => s.precision),
+                label: t.metrics.precision,
                 color: colors[1],
               },
-              { data: summaries.map((s) => val(s.recall)), label: "recall", color: colors[2] },
+              { data: summaries.map((s) => s.recall), label: t.metrics.recall, color: colors[2] },
             ]}
             grid={{ horizontal: true }}
           />
-        </CardContent>
-      </Card>
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small" aria-label="comparison">
+        </Paper>
+      )}
+      <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: "16px" }}>
+        <Table size="small" aria-label={t.compare.table}>
           <TableHead>
             <TableRow>
-              <TableCell>Run</TableCell>
-              <TableCell>Pipeline</TableCell>
-              <TableCell>Sequence</TableCell>
-              <TableCell>Noise</TableCell>
-              <TableCell align="right">Precision</TableCell>
-              <TableCell align="right">Recall</TableCell>
+              <TableCell>{t.compare.scene}</TableCell>
+              <TableCell>{t.compare.mode}</TableCell>
+              <TableCell>{t.compare.noise}</TableCell>
+              <TableCell align="right">{t.compare.precision}</TableCell>
+              <TableCell align="right">{t.compare.recall}</TableCell>
               <TableCell align="right">F1</TableCell>
               <TableCell align="right">IoU</TableCell>
               <TableCell align="right">PSNR</TableCell>
-              <TableCell align="right">FPS</TableCell>
+              <TableCell align="right">{t.compare.speed}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {summaries.map((s) => (
               <TableRow key={s.run_id} hover>
-                <TableCell sx={{ fontFamily: "monospace", fontSize: 12 }}>
-                  <Link href={routeHref({ page: "run", id: s.run_id })}>{s.run_id}</Link>
-                </TableCell>
                 <TableCell>
-                  {s.pipeline} — {s.pipeline_name}
+                  <Link href={routeHref({ page: "run", id: s.run_id })}>
+                    {t.sceneTitle(s.sequence)}
+                  </Link>
                 </TableCell>
-                <TableCell>{s.sequence}</TableCell>
-                <TableCell>{noiseLabel(s.noise)}</TableCell>
+                <TableCell>{t.modeName(s.pipeline, s.pipeline_name)}</TableCell>
+                <TableCell>{noiseLabel(s.noise, t.noise)}</TableCell>
                 <TableCell align="right">{metric(s.precision)}</TableCell>
                 <TableCell align="right">{metric(s.recall)}</TableCell>
                 <TableCell align="right">{metric(s.f1)}</TableCell>
                 <TableCell align="right">{metric(s.iou)}</TableCell>
-                <TableCell align="right">{decibels(s.psnr)}</TableCell>
-                <TableCell align="right">{fps(s.fps)}</TableCell>
+                <TableCell align="right">{decibels(s.psnr, t.units.db)}</TableCell>
+                <TableCell align="right">
+                  {fps(s.fps)} {t.units.fps}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

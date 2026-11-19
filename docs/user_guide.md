@@ -10,9 +10,9 @@ This downloads the Go modules, installs golangci-lint, creates the Python enviro
 
 ## 2. Data
 
-Three **synthetic scenes** are built in and need no download: `synthetic/street`, `synthetic/shadow`, `synthetic/night`. They have exact ground truth; the first 10 frames have none, so background models can settle.
+Four **synthetic scenes** are built in and need no download: `synthetic/plaza` (people walking across a square), `synthetic/street`, `synthetic/shadow` and `synthetic/night`. They have exact ground truth; the first 10 frames have none, so background models can settle.
 
-**CDnet 2014**: `make data` (or `scripts/download_cdnet.sh [category/sequence ...]`) downloads the archive once into `data/cdnet/` and unpacks the selected sequences to `data/cdnet/<category>/<sequence>/`. Set `CDNET_URL` to use a mirror, or put `dataset2014.zip` into `data/cdnet/` yourself. Ground truth is used only inside each sequence's temporal ROI.
+**CDnet 2014**: `make data` (or `scripts/download_cdnet.sh [category/sequence ...]`) downloads the selected sequences, one archive each, and unpacks them to `data/cdnet/<category>/<sequence>/`. The archives are kept in `data/cdnet/.archives`, so nothing is downloaded twice. Set `CDNET_URL` to use a mirror. For footage of people start with `scripts/download_cdnet.sh baseline/pedestrians shadow/peopleInShade shadow/busStation` (about 65 MB). Ground truth is used only inside each sequence's temporal ROI.
 
 **Your own video**: split it into frames and put them under `data/frames/<name>/`:
 
@@ -30,15 +30,16 @@ Folders of frames have no ground truth: you get heatmaps and speed, but no preci
 make serve        # or: go run ./cmd/heatmap serve
 ```
 
-Open <http://localhost:8080>.
+Open <http://localhost:8080>. The interface is in English or Ukrainian: switch with **EN / УК** in the top bar (the choice is remembered; a Ukrainian browser starts in Ukrainian).
 
-- **New run**: choose a pipeline (its stages are shown with their categories), a sequence (with a preview frame), optional synthetic noise and the number of frames, then **Start run**.
-- **Run page**: live progress with the current input and mask while it runs. When done:
-  - tiles with F1, precision, recall, IoU, speed, denoising PSNR/SSIM and, for p6, the main motion direction;
-  - **Frames**: input, the output of every stage, the motion mask and the ground truth for any frame, with playback;
-  - **Heatmap**: the activity heatmap over the scene, on its own and, for p5, on the top-down floor plan;
-  - **Metrics**: per-frame F1/precision/recall, time per stage, and the direction histogram for p6.
-- **Runs**: every run (including those made with `heatmap run`), with cancel/delete. Tick two or more to **Compare** them.
+- **Scenes**: every sequence the server finds, real footage first. Hover a card to preview its footage. Above the cards choose the detection mode (a pipeline, listed by its name), the length in frames and optional synthetic noise, then press **Analyze**. A scene that was already analysed with the settings on screen shows its heat and offers **Watch** instead; change the mode or the noise and it offers **Analyze** again. The settings are remembered.
+- **Viewer**: opens as soon as the analysis starts and follows it frame by frame; when it is done the footage plays in a loop. The **Detection mode** box at the top shows the same frames through another mode: it opens that analysis, or runs it first.
+  - **Trails**: every moving person leaves heat that fades (the *Trail length* slider sets how fast). **Heatmap**: the heat adds up from the first frame to the current one. **Video only**: the footage alone.
+  - *Thermal view* hides the footage and shows the heat on black; *Outline* draws a line around everything that moves in the current frame; three palettes; *Intensity* sets the strength of the heat layer.
+  - The timeline shows how much was moving in every frame; drag it to seek. Space plays and pauses, ← and → step one frame, the speed button cycles 0.5×–4×.
+  - Beside the picture: the share of the picture in motion now, the share of the scene that has seen movement so far, the busiest frame (with a jump link) and, once done, F1/precision/recall, speed, denoising PSNR/SSIM, the main motion direction for p6 and the floor-plan heatmap for p5.
+  - **How it was detected**: the frame on screen after every stage, the motion mask and the ground truth. **Charts**: per-frame F1/precision/recall, time per stage, and the direction histogram for p6.
+- **History**: every run (including those made with `heatmap run`), with cancel/delete. Tick two or more to **Compare** their heatmaps and metrics. Runs made on the command line without `-save-frames` have no frames to play; the viewer shows their final heatmap.
 
 For UI development run `go run ./cmd/heatmap serve` and `make web-dev`; Vite serves the UI on :5173 and proxies `/api` to :8080.
 

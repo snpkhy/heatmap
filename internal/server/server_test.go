@@ -79,7 +79,7 @@ func TestCatalogEndpoints(t *testing.T) {
 		t.Errorf("pipelines: %v", pipes)
 	}
 	var seqs []map[string]any
-	if getJSON(t, ts.URL+"/api/sequences", &seqs); len(seqs) != 3 {
+	if getJSON(t, ts.URL+"/api/sequences", &seqs); len(seqs) != 4 {
 		t.Errorf("sequences: %d", len(seqs))
 	}
 	resp, err := http.Get(ts.URL + "/api/sequences/preview?id=synthetic/street&frame=40")
@@ -181,6 +181,11 @@ func TestRunLifecycle(t *testing.T) {
 	d := waitStatus(t, ts.URL+"/api/runs/"+id, StatusDone)
 	if d.Run == nil || d.Run.Summary.Frames != 25 || !d.Run.SavedFrames || len(d.Run.StageKeys) != 3 {
 		t.Fatalf("detail %+v", d)
+	}
+	// A run of this server also says what it is processing, for the live view.
+	if d.Live == nil || d.Live.Scene.ID != "synthetic/street" || d.Live.Scene.Width != 160 ||
+		d.Live.Start != d.Run.Summary.Start || d.Live.Request.Pipeline != "p5" {
+		t.Errorf("live info %+v", d.Live)
 	}
 
 	// A finished run streams a single done event.

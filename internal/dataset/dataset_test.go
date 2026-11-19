@@ -12,8 +12,8 @@ import (
 
 func TestSyntheticScenes(t *testing.T) {
 	names := SyntheticNames()
-	if len(names) != 3 {
-		t.Fatalf("scenes %v, want 3", names)
+	if len(names) != 4 {
+		t.Fatalf("scenes %v, want 4", names)
 	}
 	for _, name := range names {
 		s, err := NewSynthetic(name)
@@ -267,13 +267,58 @@ func TestDiscover(t *testing.T) {
 	for _, in := range infos {
 		ids = append(ids, in.ID)
 	}
-	want := []string{"synthetic/night", "synthetic/shadow", "synthetic/street", "cdnet/shadow/tiny", "frames/clip"}
+	want := []string{"synthetic/night", "synthetic/plaza", "synthetic/shadow", "synthetic/street", "cdnet/shadow/tiny", "frames/clip"}
 	if fmt.Sprint(ids) != fmt.Sprint(want) {
 		t.Errorf("ids %v, want %v", ids, want)
 	}
 
 	onlySynthetic, err := Discover(filepath.Join(root, "missing"))
-	if err != nil || len(onlySynthetic) != 3 {
+	if err != nil || len(onlySynthetic) != 4 {
 		t.Errorf("missing data dir: %d sequences, %v", len(onlySynthetic), err)
+	}
+}
+
+func TestPlazaWalkers(t *testing.T) {
+	s, err := NewSynthetic("plaza")
+	if err != nil {
+		t.Fatal(err)
+	}
+	gt, _ := s.GroundTruth(200)
+	var motion, shadow int
+	for _, v := range gt.Pix {
+		switch v {
+		case gtMotion:
+			motion++
+		case gtShadow:
+			shadow++
+		}
+	}
+	// Several people are in the square at frame 200, each with a shadow.
+	if motion < 1500 || shadow < 150 {
+		t.Errorf("frame 200: %d moving and %d shadow pixels", motion, shadow)
+	}
+
+	near, ok := walker(100, 220, 1, 0, 0, 10, shirtRed, 0).figureAt(0, s.sc.h)
+	far, ok2 := walker(100, 60, 1, 0, 0, 10, shirtRed, 0).figureAt(0, s.sc.h)
+	if !ok || !ok2 || far.h >= near.h {
+		t.Errorf("a distant figure must be smaller: near %.1f, far %.1f", near.h, far.h)
+	}
+	if _, ok := walker(0, 0, 1, 0, 5, 10, shirtRed, 0).figureAt(11, s.sc.h); ok {
+		t.Error("a walker must be gone after its last frame")
+	}
+
+	// From top to bottom a figure is a head, a body and legs.
+	x := int(near.fx)
+	at := func(up float64) int { return near.part(x, int(near.fy-up*near.h)) }
+	if at(0.93) != partHead || at(0.65) != partBody {
+		t.Errorf("head %d, body %d", at(0.93), at(0.65))
+	}
+	legs := false
+	x0, _, w, _ := near.bounds()
+	for px := x0; px < x0+w; px++ {
+		legs = legs || near.part(px, int(near.fy-0.2*near.h)) == partLegs
+	}
+	if !legs || near.part(x0-3, int(near.fy-0.5*near.h)) != partNone {
+		t.Error("legs must be under the body and nothing outside the figure")
 	}
 }
