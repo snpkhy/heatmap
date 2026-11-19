@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { previewURL, runFile } from "./api";
-import { compass, decibels, fps, metric, noiseLabel, stageLabel } from "./format";
-import { noiseString } from "./pages/Launcher";
+import {
+  compass,
+  decibels,
+  fps,
+  metric,
+  noiseLabel,
+  percent,
+  sceneSource,
+  sceneTitle,
+  stageLabel,
+} from "./format";
+import { noiseString, posterFrame, sceneOrder } from "./pages/Scenes";
 import { parseRoute, type Route, routeHref } from "./router";
+import { sequences } from "./test/helpers";
 
 describe("format", () => {
   it("formats metrics and handles missing values", () => {
@@ -14,6 +25,9 @@ describe("format", () => {
     expect(fps(undefined)).toBe("—");
     expect(decibels(30.06)).toBe("30.1 dB");
     expect(decibels(null)).toBe("—");
+    expect(percent(0.034)).toBe("3.4%");
+    expect(percent(0.48)).toBe("48%");
+    expect(percent(null)).toBe("—");
   });
 
   it("labels noise settings", () => {
@@ -27,13 +41,43 @@ describe("format", () => {
     expect(noiseString("gaussian", 12)).toBe("gaussian:12");
   });
 
-  it("names directions and stages", () => {
+  it("names directions and steps", () => {
     expect(compass(0)).toBe("→ right");
     expect(compass(90)).toBe("↑ up");
     expect(compass(-45)).toBe("↘ down-right");
     expect(compass(359)).toBe("→ right");
     expect(stageLabel("2-running_avg_otsu")).toBe("2. running avg otsu");
     expect(stageLabel("mask")).toBe("mask");
+  });
+
+  it("titles scenes", () => {
+    expect(sceneTitle("synthetic/plaza")).toBe("Plaza");
+    expect(sceneTitle("cdnet/shadow/peopleInShade")).toBe("People in shade");
+    expect(sceneTitle("tramCrossroad_1fps")).toBe("Tram crossroad 1fps");
+    expect(sceneTitle("PETS2006")).toBe("PETS2006");
+    expect(sceneTitle("my-clip")).toBe("My clip");
+    expect(sceneSource({ source: "synthetic", category: "synthetic" })).toBe("Built-in");
+    expect(sceneSource({ source: "frames", category: "custom" })).toBe("Your footage");
+    expect(sceneSource({ source: "cdnet", category: "badWeather" })).toBe("CDnet · bad weather");
+  });
+});
+
+describe("scenes", () => {
+  const street = sequences[0];
+  const clip = { ...street, id: "frames/clip", source: "frames" as const, has_gt: false };
+  const plaza = { ...street, id: "synthetic/plaza", frames: 360 };
+
+  it("puts real footage first, then the longest built-in scenes", () => {
+    expect([street, plaza, clip].sort(sceneOrder).map((s) => s.id)).toEqual([
+      "frames/clip",
+      "synthetic/plaza",
+      "synthetic/street",
+    ]);
+  });
+
+  it("picks a poster frame from the part worth watching", () => {
+    expect(posterFrame(street)).toBe(79);
+    expect(posterFrame(clip)).toBe(75);
   });
 });
 

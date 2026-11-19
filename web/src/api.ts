@@ -1,5 +1,5 @@
-// Typed client for the Go API (internal/server). The UI never processes
-// images: it starts runs and shows what these endpoints return.
+// Typed client for the Go API (internal/server). All detection happens on the
+// server; the UI starts runs and shows what these endpoints return.
 
 export interface ParamSpec {
   name: string;
@@ -146,11 +146,20 @@ export interface RunListItem {
   created_at: string;
 }
 
+/** A run started by this server, before its results exist. */
+export interface LiveInfo {
+  request: RunRequest;
+  scene: SequenceInfo;
+  /** The first frame of the run; frames are saved under frames/<n>/. */
+  start: number;
+}
+
 export interface RunDetail {
   run_id: string;
   status: RunStatus;
   error?: string;
   progress?: Progress;
+  live?: LiveInfo;
   run?: Run;
 }
 
