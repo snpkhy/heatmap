@@ -2,7 +2,7 @@
 
 Motion detection and activity heatmaps for surveillance camera video sequences using **classical image processing** — no AI/ML; every algorithm is implemented by hand in Go.
 
-Eight pipelines (p1–p8) combine 30 hand-written methods from 11 categories. They run on CDnet 2014 sequences, your own frame folders, or three built-in synthetic scenes with exact ground truth, so everything works right after cloning — no download needed.
+Eight pipelines (p1–p8) combine 30 hand-written methods from 11 categories. They run on CDnet 2014 sequences, your own frame folders, or four built-in synthetic scenes with exact ground truth, so everything works right after cloning — no download needed.
 
 ## Requirements
 
@@ -18,6 +18,8 @@ Eight pipelines (p1–p8) combine 30 hand-written methods from 11 categories. Th
 make setup     # Go/Python/web dependencies and golangci-lint
 make serve     # build the UI and the CLI, open http://localhost:8080
 ```
+
+The UI is a gallery of scenes and a player: pick a scene and watch the footage with the heat trails people leave, or the heatmap building up over time.
 
 Without the UI:
 

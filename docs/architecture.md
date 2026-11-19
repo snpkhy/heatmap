@@ -62,7 +62,7 @@ Parallelism is across runs (pipelines × sequences × noise levels), not across 
 | Part | Choice |
 |---|---|
 | Framework | React + TypeScript, built with Vite |
-| Components | MUI (Material UI), light and dark theme |
+| Components | MUI (Material UI), dark theme by default, light optional |
 | Charts | MUI X Charts |
 | Package manager | pnpm |
 | Lint/format | Biome |
@@ -78,7 +78,9 @@ web/embed.go       //go:embed all:dist — the built UI is embedded into the Go 
 - Development: `go run ./cmd/heatmap serve` on :8080 and `make web-dev` for the Vite dev server on :5173, which proxies `/api` to Go.
 - Production: `make build` builds the frontend first, then Go; the result is a single `heatmap` binary.
 - `web/dist/.gitkeep` is committed so `go build` works even before the UI has been built.
-- The UI never processes images. It only starts runs and displays what the API returns.
+- All detection happens in Go. The UI starts runs and displays what the API returns; the one thing it computes is the heat layer of the viewer, which it draws on a canvas from the saved motion masks (`web/src/heat/`), so trails, the heatmap at any moment and the palettes can change without another run.
+- Fonts (Inter, Space Grotesk, JetBrains Mono, and Geologica for Ukrainian headings, since Space Grotesk has no Cyrillic) are bundled through Fontsource, so the UI works offline.
+- The interface is in English and Ukrainian. All its words live in `web/src/i18n.tsx`; names the server sends in English (detection modes, built-in scenes) are translated there by id, and unknown ones are shown as sent.
 - Routing uses the URL hash (`#/runs/<id>`), so no router dependency and no server-side routes are needed.
 
 API:
@@ -89,7 +91,7 @@ API:
 | `GET /api/methods`, `/api/pipelines`, `/api/sequences` | what can be run |
 | `GET /api/sequences/preview?id=&frame=` | one frame of a sequence as PNG |
 | `POST /api/runs` | start a run (pipeline + sequence + noise + frames), returns `run_id` |
-| `GET /api/runs`, `GET /api/runs/{id}` | list and details (runs on disk are included after a restart) |
+| `GET /api/runs`, `GET /api/runs/{id}` | list and details (runs on disk are included after a restart); for a run of this server the details also give the scene and the first frame, so the viewer can follow it live |
 | `GET /api/runs/{id}/events` | live progress (Server-Sent Events) |
 | `GET /api/runs/{id}/files/{file...}` | heatmaps, stage images, CSV files of a run |
 | `DELETE /api/runs/{id}` | cancel an active run or delete a finished one |
